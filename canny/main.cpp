@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     const std::string keys =
         "{help h usage ? |      | print this message     }"
         "{@image         |      | image for process      }"
-        "{sigma          | 1    | gaussian blur parameter}"
+        "{sigma          | 3    | gaussian blur parameter}"
         "{low_t          | 0.05 | low threshold value    }"
         "{high_t         | 0.09 | high threshold value   }"
         ;
@@ -44,13 +44,15 @@ int main(int argc, char** argv)
     // prepare output image
     cv::Mat result_img(heigh, width, CV_8UC1);
 
+    // measure performance with 1 thread
     double start_time, end_time;
     omp_set_num_threads(1);
     start_time = omp_get_wtime();
     canny_openmp(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
     end_time = omp_get_wtime();
     printf("1 thread time %lf\n", end_time - start_time);
-
+    
+    // measure performance with 8 threads
     omp_set_num_threads(8);
     start_time = omp_get_wtime();
     canny_openmp(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
@@ -58,7 +60,9 @@ int main(int argc, char** argv)
     printf("8 threads time %lf\n", end_time - start_time);
 
     cv::imwrite("out_cpu.png", result_img);
+
+    // measure performance on GPU
+    //canny_cuda(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma)
     //imwrite("out_cpu.png", input_img);
-    std::cout << sizeof(uint8_t);
     return 0;
 }

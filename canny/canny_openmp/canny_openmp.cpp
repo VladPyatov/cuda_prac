@@ -10,39 +10,42 @@
 
 void canny_openmp(const uint8_t* input, uint8_t* result, int height, int width, float low_t, float high_t, int sigma)
 {
-    for (int h = 0; h<height; h++)
-    {
-        for (int w = 0; w<width; w++)
-        {
-            result[h*width + w] = 0;
-        }
-    }
-    // preprocess image
+    // memory allocation
     uint8_t* blurred_image = (uint8_t*) malloc(height * width * sizeof(uint8_t));
+    uint8_t* gradient = (uint8_t*) calloc(height * width, sizeof(uint8_t));
+	uint8_t* direction = (uint8_t*) malloc(height * width * sizeof(uint8_t));
+    uint8_t* suppressed = (uint8_t*) calloc(height * width, sizeof(uint8_t));
+    uint8_t* low = (uint8_t*) malloc(sizeof(uint8_t));
+    uint8_t* high = (uint8_t*) malloc(sizeof(uint8_t));
+
+    // preprocess image
     gaussian_blur(input, blurred_image, height, width, sigma);
     // compute gradients and directions
-    uint8_t* gradient = (uint8_t*) calloc(height * width, sizeof(float));
-	uint8_t* direction = (uint8_t*) malloc(height * width * sizeof(uint8_t));
     sobel(blurred_image, gradient, direction, height, width);
     // non-maximum suppression
-    uint8_t* suppressed = (uint8_t*) calloc(height * width, sizeof(uint8_t));
     nonmax_suppression(gradient, direction, suppressed, height, width);
-    //cv::imwrite("4_suppressed.png", cv::Mat(height, width, CV_8UC1, suppressed));
+    // find threshold limits
+    threshold_limits(suppressed,low, high, height, width, low_t, high_t);
+    // double threshold
+    double_threshold(suppressed, height, width, *low, *high);
     // hysteresis
-    //hysteresis(result, height, width, low_t, high_t);
-    hysteresis(suppressed, result, height, width, low_t, high_t);
+    hysteresis(suppressed, result, height, width, *low, *high);
+
     // plot blurred
-    cv::imwrite("1_blur.png", cv::Mat(height, width, CV_8UC1, blurred_image));
+    // cv::imwrite("1_blur.png", cv::Mat(height, width, CV_8UC1, blurred_image));
     // plot dir
-    cv::imwrite("2_dir.png", cv::Mat(height, width, CV_8UC1, direction));
-
+    // cv::imwrite("2_dir.png", cv::Mat(height, width, CV_8UC1, direction));
     // plot grad
-    cv::imwrite("3_grad.png", cv::Mat(height, width, CV_8UC1, gradient));
-
-    free(suppressed);
+    // cv::imwrite("3_grad.png", cv::Mat(height, width, CV_8UC1, gradient));
+    // plot suppression
+    // cv::imwrite("4_suppressed.png", cv::Mat(height, width, CV_8UC1, suppressed));
+    
     free(blurred_image);
     free(gradient);
     free(direction);
+    free(suppressed);
+    free(low);
+    free(high);
 }
 
 
@@ -233,55 +236,12 @@ void nonmax_suppression(const uint8_t* gradient, const uint8_t* direction, uint8
 }
 
 
-// void hysteresis(uint8_t* input, int height, int width, float low_t, float high_t)
-// {
-//     uint8_t max_val = input[0];
-//     uint8_t pixel;
-
-//     #pragma omp parallel for private(pixel) reduction(max:max_val)
-//     for (int h = 0; h<height; h++)
-//     {
-//         for (int w = 0; w<width; w++)
-//         {
-//             pixel = input[h*width + w];
-//             max_val = max_val > pixel ? max_val : pixel;
-//         }
-//     }
-//     printf("%d", max_val);
-//     uint8_t high = high_t * max_val;
-//     uint8_t low = low_t * high;
-
-//     #pragma omp parallel for private(pixel)
-//     for (int h = 1; h<height-1; h++)
-//     {
-//         for (int w = 1; w<width-1; w++)
-//         {
-//             pixel = input[h*width + w];
-//             input[h*width + w] = pixel > high ? 255 : pixel;
-//             input[h*width + w] = pixel < low ? 0 : pixel;
-//         }
-//     }
-//     //cv::imwrite("5_suppressed.png", cv::Mat(height, width, CV_8UC1, input));
-
-//     for (int h = 1; h<height-1; h++)
-//     {
-//         for (int w = 1; w<width-1; w++)
-//         {
-//             if(input[h*width + w] >= low && input[h*width + w] <= high)
-//                 input[h*width + w] = ((input[h*width + w+1] == 255 || input[h*width + w-1] ||
-//                                     input[h*(width+1) + w-1] == 255 || input[h*(width+1) + w] == 255 ||
-//                                     input[h*(width+1) + w+1] == 255 || input[h*(width-1) + w-1] == 255 ||
-//                                     input[h*(width-1) + w] == 255 || input[h*(width-1) + w+1] == 255)) ? 255 : 0;
-//         }
-//     }
-
-// }
-void hysteresis(uint8_t* input, uint8_t* output, int height, int width, float low_t, float high_t)
+void threshold_limits(uint8_t* input, uint8_t* low, uint8_t* high, int height, int width, float low_t, float high_t)
 {
     uint8_t max_val = input[0];
     uint8_t pixel;
 
-    //#pragma omp parallel for private(pixel) reduction(max:max_val)
+    #pragma omp parallel for private(pixel) reduction(max:max_val)
     for (int h = 0; h<height; h++)
     {
         for (int w = 0; w<width; w++)
@@ -290,38 +250,38 @@ void hysteresis(uint8_t* input, uint8_t* output, int height, int width, float lo
             max_val = max_val > pixel ? max_val : pixel;
         }
     }
-    printf("%d", max_val);
-    uint8_t high = high_t * max_val;
-    uint8_t low = low_t * high;
+    *high = high_t * max_val;
+    *low = low_t * (*high);
+}
 
-    //#pragma omp parallel for private(pixel)
+void double_threshold(uint8_t* input, int height, int width, uint8_t low, uint8_t high)
+{
+    #pragma omp parallel for
     for (int h = 1; h<height-1; h++)
     {
         for (int w = 1; w<width-1; w++)
         {
-            pixel = input[h*width + w];
-            input[h*width + w] = pixel > high ? 255 : pixel;
-            input[h*width + w] = pixel < low ? 0 : pixel;
+            input[h*width + w] = input[h*width + w] > high ? 255 : input[h*width + w];
+            input[h*width + w] = input[h*width + w] < low ? 0 : input[h*width + w];
         }
     }
-    //cv::imwrite("5_suppressed.png", cv::Mat(height, width, CV_8UC1, input));
-    for (int h = 0; h<height; h++)
-    {
-        for (int w = 0; w<width; w++)
-        {
-            output[h*width + w] = input[h*width + w];
-        }
-    }
-    //cv::imwrite("6_suppressed.png", cv::Mat(height, width, CV_8UC1, output));
+}
+
+void hysteresis(const uint8_t* input, uint8_t* output, int height, int width, uint8_t low, uint8_t high)
+{
+
+    memcpy(output, input, height * width * sizeof(uint8_t));
+
+    #pragma omp parallel for
     for (int h = 1; h<height-1; h++)
     {
         for (int w = 1; w<width-1; w++)
         {
             if(input[h*width + w] >= low && input[h*width + w] <= high)
-                output[h*width + w] = ((input[h*width + w+1] == 255 || input[h*width + w-1] ||
-                                    input[h*(width+1) + w-1] == 255 || input[h*(width+1) + w] == 255 ||
-                                    input[h*(width+1) + w+1] == 255 || input[h*(width-1) + w-1] == 255 ||
-                                    input[h*(width-1) + w] == 255 || input[h*(width-1) + w+1] == 255)) ? 255 : 0;
+                output[h*width + w] = (input[h*width + w+1] == 255 || input[h*width + w-1] == 255 ||
+                                    input[h*width + w+width-1] == 255 || input[h*width + w+width] == 255 ||
+                                    input[h*width + w+width+1] == 255 || input[h*width + w-width-1] == 255 ||
+                                    input[h*width + w-width] == 255 || input[h*width + w-width+1] == 255) ? 255 : 0;
         }
     }
 }
