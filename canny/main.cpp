@@ -2,6 +2,7 @@
 #include <opencv2/core/utility.hpp> // parser
 #include <cstdio>
 #include "canny_openmp/canny_openmp.hpp"
+#include "canny_cuda/canny_cuda.hpp"
 #include "omp.h"
 #include <iostream>
 int main(int argc, char** argv)
@@ -50,19 +51,19 @@ int main(int argc, char** argv)
     start_time = omp_get_wtime();
     canny_openmp(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
     end_time = omp_get_wtime();
-    printf("1 thread time %lf\n", end_time - start_time);
+    printf("1 thread time %lf ms\n", 1000*(end_time - start_time));
     
     // measure performance with 8 threads
     omp_set_num_threads(8);
     start_time = omp_get_wtime();
     canny_openmp(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
     end_time = omp_get_wtime();
-    printf("8 threads time %lf\n", end_time - start_time);
+    printf("8 threads time %lf ms\n", 1000*(end_time - start_time));
 
     cv::imwrite("out_cpu.png", result_img);
-
+    
     // measure performance on GPU
-    //canny_cuda(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma)
-    //imwrite("out_cpu.png", input_img);
+    canny_cuda(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
+    cv::imwrite("out_gpu.png", result_img);
     return 0;
 }

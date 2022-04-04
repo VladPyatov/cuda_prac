@@ -12,7 +12,7 @@ void canny_openmp(const uint8_t* input, uint8_t* result, int height, int width, 
 {
     // memory allocation
     uint8_t* blurred_image = (uint8_t*) malloc(height * width * sizeof(uint8_t));
-    uint8_t* gradient = (uint8_t*) calloc(height * width, sizeof(uint8_t));
+    uint8_t* gradient = (uint8_t*) malloc(height * width * sizeof(uint8_t));
 	uint8_t* direction = (uint8_t*) malloc(height * width * sizeof(uint8_t));
     uint8_t* suppressed = (uint8_t*) calloc(height * width, sizeof(uint8_t));
     uint8_t* low = (uint8_t*) malloc(sizeof(uint8_t));
@@ -36,7 +36,7 @@ void canny_openmp(const uint8_t* input, uint8_t* result, int height, int width, 
     // plot dir
     // cv::imwrite("2_dir.png", cv::Mat(height, width, CV_8UC1, direction));
     // plot grad
-    // cv::imwrite("3_grad.png", cv::Mat(height, width, CV_8UC1, gradient));
+    //cv::imwrite("3_grad_2.png", cv::Mat(height, width, CV_8UC1, gradient));
     // plot suppression
     // cv::imwrite("4_suppressed.png", cv::Mat(height, width, CV_8UC1, suppressed));
     
@@ -47,7 +47,6 @@ void canny_openmp(const uint8_t* input, uint8_t* result, int height, int width, 
     free(low);
     free(high);
 }
-
 
 void gaussian_blur(const uint8_t* input, uint8_t* result, int height, int width, int sigma)
 {
@@ -127,24 +126,30 @@ void sobel(const uint8_t* input, uint8_t* gradient, uint8_t* direction, int heig
 {
     const int8_t Gx[] = { -1, 0, 1, -2, 0, 2, -1, 0, 1 };
 	const int8_t Gy[] = { 1, 2, 1, 0, 0, 0, -1,-2,-1 };
-
+    int kwidth = 1;
+    int left, right, up, down;
     float grad_x, grad_y, theta;
-    float* float_gradient = (float*) calloc(height * width, sizeof(float));
+    float* float_gradient = (float*) malloc(height * width *sizeof(float));
     uint8_t dir, kernel_index, pixel;
     int64_t pixel_position;
     
-    #pragma omp parallel for private(grad_x, grad_y, theta, dir, kernel_index, pixel, pixel_position)
-    for(int h=1; h<height-1; h++)
+    #pragma omp parallel for private(left, right, up, down, grad_x, grad_y, theta, dir, kernel_index, pixel, pixel_position)
+    for(int h=0; h<height; h++)
     {
-        for(int w=1; w<width-1; w++)
+        for(int w=0; w<width; w++)
         {
             grad_x = 0.0;
             grad_y = 0.0;
             pixel_position = h*width + w;
             kernel_index = 0;
-            for(int y=-1; y<=1; y++)
+            // find kernel limits
+            up = -h > -kwidth ? -h : -kwidth;
+            down = kwidth < height-h-1 ? kwidth : height-h-1;
+            left = -w > -kwidth ? -w : -kwidth;
+            right = kwidth < width-w-1 ? kwidth : width-w-1;
+            for(int y=up; y<=down; y++)
             {
-                for(int x=-1; x<=1; x++, kernel_index++)
+                for(int x=left; x<=right; x++, kernel_index++)
                 {
                     pixel = input[pixel_position + y*width+x];
                     grad_x += pixel * Gx[kernel_index];
@@ -234,7 +239,6 @@ void nonmax_suppression(const uint8_t* gradient, const uint8_t* direction, uint8
         }
     }
 }
-
 
 void threshold_limits(uint8_t* input, uint8_t* low, uint8_t* high, int height, int width, float low_t, float high_t)
 {
