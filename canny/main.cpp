@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     int sigma = parser.get<int>("sigma");
     float low_t = parser.get<float>("low_t");
     float high_t = parser.get<float>("high_t");
-    printf("sigma=%d, low_threshold=%f, high_threshold=%f\n", sigma, low_t, high_t);
+    printf("sigma=%d, low_threshold=%f, high_threshold=%f\n\n", sigma, low_t, high_t);
 
     // prepare output image
     cv::Mat result_img(heigh, width, CV_8UC1);
@@ -51,14 +51,14 @@ int main(int argc, char** argv)
     start_time = omp_get_wtime();
     canny_openmp(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
     end_time = omp_get_wtime();
-    printf("1 thread time %lf ms\n", 1000*(end_time - start_time));
+    printf("CPU 1 thread time: %lf ms\n", 1000*(end_time - start_time));
     
     // measure performance with 8 threads
     omp_set_num_threads(8);
     start_time = omp_get_wtime();
     canny_openmp(input_img.data, result_img.data, heigh, width, low_t, high_t, sigma);
     end_time = omp_get_wtime();
-    printf("8 threads time %lf ms\n", 1000*(end_time - start_time));
+    printf("CPU 8 threads time: %lf ms\n\n", 1000*(end_time - start_time));
 
     cv::imwrite("out_cpu.png", result_img);
     

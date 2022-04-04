@@ -32,11 +32,11 @@ void canny_openmp(const uint8_t* input, uint8_t* result, int height, int width, 
     hysteresis(suppressed, result, height, width, *low, *high);
 
     // plot blurred
-    // cv::imwrite("1_blur.png", cv::Mat(height, width, CV_8UC1, blurred_image));
+    cv::imwrite("1_blur.png", cv::Mat(height, width, CV_8UC1, blurred_image));
     // plot dir
     // cv::imwrite("2_dir.png", cv::Mat(height, width, CV_8UC1, direction));
     // plot grad
-    //cv::imwrite("3_grad_2.png", cv::Mat(height, width, CV_8UC1, gradient));
+    //cv::imwrite("3_grad.png", cv::Mat(height, width, CV_8UC1, gradient));
     // plot suppression
     // cv::imwrite("4_suppressed.png", cv::Mat(height, width, CV_8UC1, suppressed));
     
@@ -129,27 +129,27 @@ void sobel(const uint8_t* input, uint8_t* gradient, uint8_t* direction, int heig
     int kwidth = 1;
     int left, right, up, down;
     float grad_x, grad_y, theta;
-    float* float_gradient = (float*) malloc(height * width *sizeof(float));
+    float* float_gradient = (float*) calloc(height * width,sizeof(float));
     uint8_t dir, kernel_index, pixel;
     int64_t pixel_position;
     
     #pragma omp parallel for private(left, right, up, down, grad_x, grad_y, theta, dir, kernel_index, pixel, pixel_position)
-    for(int h=0; h<height; h++)
+    for(int h=1; h<height-1; h++)
     {
-        for(int w=0; w<width; w++)
+        for(int w=1; w<width-1; w++)
         {
             grad_x = 0.0;
             grad_y = 0.0;
             pixel_position = h*width + w;
             kernel_index = 0;
             // find kernel limits
-            up = -h > -kwidth ? -h : -kwidth;
-            down = kwidth < height-h-1 ? kwidth : height-h-1;
-            left = -w > -kwidth ? -w : -kwidth;
-            right = kwidth < width-w-1 ? kwidth : width-w-1;
-            for(int y=up; y<=down; y++)
+            // up = -h > -kwidth ? -h : -kwidth;
+            // down = kwidth < height-h-1 ? kwidth : height-h-1;
+            // left = -w > -kwidth ? -w : -kwidth;
+            // right = kwidth < width-w-1 ? kwidth : width-w-1;
+            for(int y=-1; y<=1; y++)
             {
-                for(int x=left; x<=right; x++, kernel_index++)
+                for(int x=-1; x<=1; x++, kernel_index++)
                 {
                     pixel = input[pixel_position + y*width+x];
                     grad_x += pixel * Gx[kernel_index];
@@ -261,9 +261,9 @@ void threshold_limits(uint8_t* input, uint8_t* low, uint8_t* high, int height, i
 void double_threshold(uint8_t* input, int height, int width, uint8_t low, uint8_t high)
 {
     #pragma omp parallel for
-    for (int h = 1; h<height-1; h++)
+    for (int h = 0; h<height; h++)
     {
-        for (int w = 1; w<width-1; w++)
+        for (int w = 0; w<width; w++)
         {
             input[h*width + w] = input[h*width + w] > high ? 255 : input[h*width + w];
             input[h*width + w] = input[h*width + w] < low ? 0 : input[h*width + w];
