@@ -24,9 +24,11 @@ __global__ void ChessUpsample2D(float *dev_input, float *dev_output, int in_chan
 __global__ void FlipWeight2D(float *dev_input_weight, int out_channels, int in_channels, int in_height, int in_width);
 __global__ void ReLU(float *dev_input, int in_channels, int in_height, int in_width);
 __global__ void Sigmoid(float *dev_input, int in_channels, int in_height, int in_width);
+__global__ void TransposeKernel(float *dev_input, float *dev_output, int out_channels, int in_channels, int in_height, int in_width);
 
 void encoder_layer(float *dev_input, float *dev_output, float *weight, float *bias, int in_channels, int out_channels, int height, int width);
 void decoder_layer(float *dev_input, float *dev_output, float *weight, float *bias, int in_channels, int out_channels, int height, int width);
+void decoder_layer_memory(float *dev_input, float *dev_output, float *weight, float *bias, int in_channels, int out_channels, int height, int width);
 void refine_layer(float *dev_input, float *dev_output, float *weight, float *bias, int in_channels, int out_channels, int height, int width);
 
 
