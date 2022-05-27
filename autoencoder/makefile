@@ -2,7 +2,7 @@ opencv4 = `pkg-config --cflags --libs opencv4`
 cuda = -L/usr/local/cuda/lib64 -lcuda -lcudart
 
 denoise: main.o cnn_autoencoder.o layers.o utils.o
-	g++ main.o cnn_autoencoder.o layers.o utils.o -o denoiser.bin $(opencv4) $(cuda)
+	g++ main.o cnn_autoencoder.o layers.o utils.o -fopenmp -o denoiser.bin $(opencv4) $(cuda)
 
 main.o: main.cpp
 	g++ -std=c++17 -c main.cpp $(opencv4)
