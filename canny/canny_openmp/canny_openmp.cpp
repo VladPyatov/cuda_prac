@@ -32,7 +32,7 @@ void canny_openmp(const uint8_t* input, uint8_t* result, int height, int width, 
     hysteresis(suppressed, result, height, width, *low, *high);
 
     // plot blurred
-    cv::imwrite("1_blur.png", cv::Mat(height, width, CV_8UC1, blurred_image));
+    //cv::imwrite("1_blur.png", cv::Mat(height, width, CV_8UC1, blurred_image));
     // plot dir
     // cv::imwrite("2_dir.png", cv::Mat(height, width, CV_8UC1, direction));
     // plot grad
