@@ -6,6 +6,7 @@
 #include "cuda_runtime.h"
 #include "utils.cuh"
 #include "layers.cuh"
+#include "shared_layers.cuh"
 
 std::pair<float, float> denoise(const uint8_t *input, uint8_t *result, param *weights, int height, int width);
 

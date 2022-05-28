@@ -212,21 +212,22 @@ float encoder_layer(float *dev_input, float *dev_output, float *weight, float *b
 	cudaEventCreate(&conv_stop); 
     float conv_time = 0;
     cudaEventRecord(conv_start, 0);
-    Conv2D<<<conv_grid_size, conv_block_size>>>
+    SharedConv2DReLU<<<conv_grid_size, conv_block_size>>>
     (
         dev_padded, dev_conv_weight, dev_conv_bias, dev_conv,
         in_channels, out_channels, padded_height, padded_width, 3, 3
     );
-    // relu
-    ReLU<<<conv_grid_size, conv_block_size>>>(dev_conv, out_channels, height, width);
+    // -- relu
+    //ReLU<<<conv_grid_size, conv_block_size>>>(dev_conv, out_channels, height, width);
     // -- timer off
     cudaDeviceSynchronize();
     cudaEventRecord(conv_stop, 0);
 	cudaEventSynchronize(conv_stop);
     cudaEventElapsedTime(&conv_time, conv_start, conv_stop);
-    // -- maxpool
+    // - maxpool
     dim3 pool_block_size(32, 32, 1);
     dim3 pool_grid_size((width/2)/32+1, (height/2)/32+1, out_channels);
+    // -- timer on
     cudaEvent_t pool_start, pool_stop;
 	cudaEventCreate(&pool_start);
 	cudaEventCreate(&pool_stop); 
@@ -236,6 +237,7 @@ float encoder_layer(float *dev_input, float *dev_output, float *weight, float *b
     (
         dev_conv, dev_output, out_channels, height, width, 2,2,2,2
     );
+    // -- timer off
     cudaDeviceSynchronize();
     cudaEventRecord(pool_stop, 0);
 	cudaEventSynchronize(pool_stop);
@@ -323,13 +325,13 @@ float decoder_layer(float *dev_input, float *dev_output, float *weight, float *b
 	cudaEventCreate(&conv_stop); 
     float conv_time = 0;
     cudaEventRecord(conv_start, 0);
-    Conv2D<<<conv_grid_size, conv_block_size>>>
+    SharedConv2DReLU<<<conv_grid_size, conv_block_size>>>
     (
         dev_padded, dev_conv_weight_flip, dev_conv_bias, dev_output,
         in_channels, out_channels, padded_height, padded_width, 3, 3
     );
     // relu
-    ReLU<<<conv_grid_size, conv_block_size>>>(dev_output, out_channels, conv_height, conv_width);
+    //ReLU<<<conv_grid_size, conv_block_size>>>(dev_output, out_channels, conv_height, conv_width);
     cudaDeviceSynchronize();
     cudaEventRecord(conv_stop, 0);
 	cudaEventSynchronize(conv_stop);
@@ -388,12 +390,12 @@ float refine_layer(float *dev_input, float *dev_output, float *weight, float *bi
 	cudaEventCreate(&conv_stop); 
     float conv_time = 0;
     cudaEventRecord(conv_start, 0);
-    Conv2D<<<conv_grid_size, conv_block_size>>>
+    SharedConv2DSigmoid<<<conv_grid_size, conv_block_size>>>
     (
         dev_padded, dev_conv_weight, dev_conv_bias, dev_output,
         in_channels, out_channels, padded_height, padded_width, 3, 3
     );
-    Sigmoid<<<conv_grid_size, conv_block_size>>>(dev_output, out_channels, height, width);
+    //Sigmoid<<<conv_grid_size, conv_block_size>>>(dev_output, out_channels, height, width);
     cudaDeviceSynchronize();
     cudaEventRecord(conv_stop, 0);
 	cudaEventSynchronize(conv_stop);

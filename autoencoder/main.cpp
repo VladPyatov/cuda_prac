@@ -82,7 +82,6 @@ int main(int argc, char** argv)
     // run benchmark
     if (benchmark > 0)
     {
-        //double start_time = omp_get_wtime();
         float total_time = 0;
         float op_time = 0;
         for(int i=0; i<benchmark; i++)
@@ -91,7 +90,6 @@ int main(int argc, char** argv)
             total_time += result.first;
             op_time += result.second;
         }
-        //double end_time = omp_get_wtime();
         std::cout << "Mean time (total): " <<  total_time/float(benchmark) << " ms\n";
         std::cout << "Mean time (only autoencoder's compute): " <<  op_time/float(benchmark) << " ms\n\n";
     }
