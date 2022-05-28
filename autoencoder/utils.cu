@@ -20,6 +20,9 @@ void print_array(float * a, int h, int w, int c)
 }
 
 
+/*
+ for full explanation see https://kezunlin.me/post/b6e8d46e/
+ */
 void load_weights(float* weight_array, std::string weight_path, unsigned weight_size)
 {
     std::ifstream ifs(weight_path, std::ifstream::binary);

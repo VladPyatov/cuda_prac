@@ -47,17 +47,39 @@ int main(int argc, char** argv)
     // load weights
     fs::path weights_path_object = fs::path(weights_path);
     // allocate memory for encoder weights
-    float enc_conv1_weight[32*1*3*3];
-    float enc_conv1_bias[32];
-    float enc_conv2_weight[32*32*3*3];
-    float enc_conv2_bias[32];
-    // allocate memory for decoder weights
-    float dec_tconv1_weight[32*32*3*3];
-    float dec_tconv1_bias[32];
-    float dec_tconv2_weight[32*32*3*3];
-    float dec_tconv2_bias[32];
-    float dec_conv1_weight[1*32*3*3];
-    float dec_conv1_bias[1];
+    // float enc_conv1_weight[32*1*3*3];
+    // float enc_conv1_bias[32];
+    // float enc_conv2_weight[32*32*3*3];
+    // float enc_conv2_bias[32];
+    // // allocate memory for decoder weights
+    // float dec_tconv1_weight[32*32*3*3];
+    // float dec_tconv1_bias[32];
+    // float dec_tconv2_weight[32*32*3*3];
+    // float dec_tconv2_bias[32];
+    // float dec_conv1_weight[1*32*3*3];
+    // float dec_conv1_bias[1];
+    float *enc_conv1_weight;
+    cudaMallocHost((void**)&enc_conv1_weight, 32*1*3*3*sizeof(float));
+    float *enc_conv1_bias;
+    cudaMallocHost((void**)&enc_conv1_bias, 32*sizeof(float));
+    float *enc_conv2_weight;
+    cudaMallocHost((void**)&enc_conv2_weight, 32*32*3*3*sizeof(float));
+    float *enc_conv2_bias;
+    cudaMallocHost((void**)&enc_conv2_bias, 32*sizeof(float));
+    float *dec_tconv1_weight;
+    cudaMallocHost((void**)&dec_tconv1_weight, 32*32*3*3*sizeof(float));
+    float *dec_tconv1_bias;
+    cudaMallocHost((void**)&dec_tconv1_bias, 32*sizeof(float));
+    float *dec_tconv2_weight;
+    cudaMallocHost((void**)&dec_tconv2_weight, 32*32*3*3*sizeof(float));
+    float *dec_tconv2_bias;
+    cudaMallocHost((void**)&dec_tconv2_bias, 32*sizeof(float));
+    float *dec_conv1_weight;
+    cudaMallocHost((void**)&dec_conv1_weight, 1*32*3*3*sizeof(float));
+    float *dec_conv1_bias;
+    cudaMallocHost((void**)&dec_conv1_bias, 1*sizeof(float));
+
+
     // load encoder weights
     load_weights(enc_conv1_weight, weights_path_object/"enc_conv1_weight.bin", 32*1*3*3);
     load_weights(enc_conv1_bias, weights_path_object/"enc_conv1_bias.bin", 32);
@@ -83,15 +105,15 @@ int main(int argc, char** argv)
     if (benchmark > 0)
     {
         float total_time = 0;
-        float op_time = 0;
+        //float op_time = 0;
         for(int i=0; i<benchmark; i++)
         {
             auto result = denoise(input_img.data, result_img.data, weights_and_biases, heigh, width);
             total_time += result.first;
-            op_time += result.second;
+            //op_time += result.second;
         }
         std::cout << "Mean time (total): " <<  total_time/float(benchmark) << " ms\n";
-        std::cout << "Mean time (only autoencoder's compute): " <<  op_time/float(benchmark) << " ms\n\n";
+        //std::cout << "Mean time (only autoencoder's compute): " <<  op_time/float(benchmark) << " ms\n\n";
     }
     else
     {
