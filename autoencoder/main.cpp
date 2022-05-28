@@ -1,6 +1,4 @@
 #include <filesystem>
-#include <fstream>
-#include <cstdio>
 #include <iostream>
 #include <regex>
 #include <opencv2/imgcodecs.hpp> // imread, imwrite
@@ -41,7 +39,7 @@ int main(int argc, char** argv)
     }
     int width = input_img.cols;
     int heigh = input_img.rows;
-    printf("Successfully loaded Image of size [%d, %d]: %s\n", heigh, width, image_path.c_str());
+    printf("Successfully loaded Image of size [%d, %d]: %s\n\n", heigh, width, image_path.c_str());
 
     // prepare output image
     cv::Mat result_img(heigh, width, CV_8UC1);
@@ -84,13 +82,18 @@ int main(int argc, char** argv)
     // run benchmark
     if (benchmark > 0)
     {
-        double start_time = omp_get_wtime();
+        //double start_time = omp_get_wtime();
+        float total_time = 0;
+        float op_time = 0;
         for(int i=0; i<benchmark; i++)
         {
-            denoise(input_img.data, result_img.data, weights_and_biases, heigh, width);
+            auto result = denoise(input_img.data, result_img.data, weights_and_biases, heigh, width);
+            total_time += result.first;
+            op_time += result.second;
         }
-        double end_time = omp_get_wtime();
-        printf("Mean time: %lf ms\n\n", 1000*(end_time - start_time)/double(benchmark));
+        //double end_time = omp_get_wtime();
+        std::cout << "Mean time (total): " <<  total_time/float(benchmark) << " ms\n";
+        std::cout << "Mean time (only autoencoder's compute): " <<  op_time/float(benchmark) << " ms\n\n";
     }
     else
     {

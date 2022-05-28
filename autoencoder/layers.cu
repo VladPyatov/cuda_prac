@@ -2,8 +2,8 @@
 Padding with zeros operation
     @param dev_input - input tensor of shape C_in x H x W
     @param dev_output - output tensor of shape C_in x (H+up+down) x (W+left+right)
-    @param in_channels, out_channels, in_height, in_width - input tensor shape
-    @param kernel_height, kernel_width - kernel size
+    @param in_channels, height, width - input tensor shape
+    @param up, down, left, right - padding size
 */
 __global__ void ZeroPad2D(float *dev_input, float *dev_output, int in_channels, int height, int width, int up, int down, int left, int right)
 {
@@ -66,6 +66,92 @@ __global__ void Conv2D(float *dev_input, float *dev_weight, float *dev_bias, flo
         }
     }
     dev_output[z*out_height*out_width + y*out_width + x] = sum + dev_bias[z];
+}
+
+
+/*
+Convolution operation (stride=1) + ReLU
+    @param dev_input - input tensor of shape C_in x H x W
+    @param dev_weight - conv weight of shape C_out x C_in x H x W
+    @param dev_bias - conv bias of shape C_out
+    @param dev_output - output tensor of shape C_out x H x W
+    @param in_channels, in_height, in_width - input tensor shape
+    @param out_channels - # of output channels
+    @param kernel_height, kernel_width - kernel size
+*/
+__global__ void Conv2DReLU(float *dev_input, float *dev_weight, float *dev_bias, float *dev_output, int in_channels, int out_channels, int in_height, int in_width, int kernel_height, int kernel_width)
+{
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    int height_cut = kernel_height/2;
+    int out_height = in_height - 2*height_cut;
+    int width_cut = kernel_width/2;
+    int out_width = in_width - 2*width_cut;
+
+    if(z > out_channels-1 || y > out_height-1 || x > out_width-1)
+        return;
+
+    float sum = dev_bias[z];
+    float weight, value;
+
+    for(int c=0; c<in_channels; c++)
+    {
+        for(int k_h=0; k_h<kernel_height; k_h++)
+        {
+            for(int k_w=0; k_w<kernel_width; k_w++)
+            {
+                weight = dev_weight[z*kernel_height*kernel_width*in_channels + c*kernel_height*kernel_width+k_h*kernel_width+k_w];
+                value = dev_input[c*in_height*in_width + (y+height_cut + k_h-kernel_height/2)*in_width + x+width_cut + k_w-kernel_width/2];
+                sum += weight*value;
+            }
+        }
+    }
+    dev_output[z*out_height*out_width + y*out_width + x] = sum > 0. ? sum : 0;
+}
+
+
+/*
+Convolution operation (stride=1) + Sigmoid
+    @param dev_input - input tensor of shape C_in x H x W
+    @param dev_weight - conv weight of shape C_out x C_in x H x W
+    @param dev_bias - conv bias of shape C_out
+    @param dev_output - output tensor of shape C_out x H x W
+    @param in_channels, in_height, in_width - input tensor shape
+    @param out_channels - # of output channels
+    @param kernel_height, kernel_width - kernel size
+*/
+__global__ void Conv2DSigmoid(float *dev_input, float *dev_weight, float *dev_bias, float *dev_output, int in_channels, int out_channels, int in_height, int in_width, int kernel_height, int kernel_width)
+{
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    int height_cut = kernel_height/2;
+    int out_height = in_height - 2*height_cut;
+    int width_cut = kernel_width/2;
+    int out_width = in_width - 2*width_cut;
+
+    if(z > out_channels-1 || y > out_height-1 || x > out_width-1)
+        return;
+
+    float sum = dev_bias[z];
+    float weight, value;
+
+    for(int c=0; c<in_channels; c++)
+    {
+        for(int k_h=0; k_h<kernel_height; k_h++)
+        {
+            for(int k_w=0; k_w<kernel_width; k_w++)
+            {
+                weight = dev_weight[z*kernel_height*kernel_width*in_channels + c*kernel_height*kernel_width+k_h*kernel_width+k_w];
+                value = dev_input[c*in_height*in_width + (y+height_cut + k_h-kernel_height/2)*in_width + x+width_cut + k_w-kernel_width/2];
+                sum += weight*value;
+            }
+        }
+    }
+    dev_output[z*out_height*out_width + y*out_width + x] = 1/(1+expf(-sum));
 }
 
 
