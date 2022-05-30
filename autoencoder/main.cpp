@@ -4,7 +4,6 @@
 #include <opencv2/imgcodecs.hpp> // imread, imwrite
 #include <opencv2/core/utility.hpp> // parser
 #include "cnn_autoencoder.cuh"
-#include "omp.h"
 
 namespace fs = std::filesystem;
 
